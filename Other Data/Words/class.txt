@@ -1,4 +1,0 @@
-Word: butcher, Index: 000
-Word: aadhar_card, Index: 001
-Word: cinematography, Index: 002
-Word: dedication, Index: 003

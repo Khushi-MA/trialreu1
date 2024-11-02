@@ -32,8 +32,8 @@ class SignDataset(Dataset):
 
 def create_dataloader(batch_size=8, max_frames=100):
     # Load preprocessed data and labels
-    video_data = torch.load('data/video_databig.pt')
-    labels = torch.load('data/labelsbig.pt')
+    video_data = torch.load('data/video_data105.pt')
+    labels = torch.load('data/labels105.pt')
 
     # Create a label mapping
     unique_labels = list(set(labels))

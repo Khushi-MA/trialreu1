@@ -6,10 +6,11 @@ import mediapipe as mp
 from torchvision import transforms
 import numpy as np
 from PIL import Image
+import mediapipe as mp
 
 # Function to perform exact match
 def exact_match(query, labels):
-    video_data_path = "data/video_databig.pt" 
+    video_data_path = "data/video_data105.pt" 
     video_data = torch.load(video_data_path, weights_only=True)
 
     if query in labels:
@@ -38,26 +39,32 @@ def similar_word_search(query, labels):
         return None
     
 def check_match_for_query_in_label(query, labels):
+    print(f"Checking for exact match for query: '{query}'...")
     video_frames = exact_match(query, labels)
 
     if not video_frames:
         print(f"Exact match not found for '{query}'. Searching for similar words...")
         similar_word = similar_word_search(query, labels)
         if similar_word:
+            print(f"Similar word found: '{similar_word}'. Retrieving corresponding video frames...")
             video_frames = exact_match(similar_word, labels)
-            print(f"Similar word found: '{similar_word}', corresponding video frames retrieved.")
+            print(f"Corresponding video frames for similar word '{similar_word}' retrieved.")
         else:
             print("No similar word found.")
     else:
-        print(f"Exact match found for '{query}', corresponding video frames retrieved.")
+        print(f"Exact match found for '{query}'. Corresponding video frames retrieved.")
 
     return video_frames
 
+
+
 # Function to blackout background and keep only hands and face
 def blackout_background_with_hands(frame):
+    print("Initializing MediaPipe Hands...")
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5)
 
+    print("Converting frame to RGB...")
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results_hands = hands.process(frame_rgb)
 
@@ -66,11 +73,16 @@ def blackout_background_with_hands(frame):
 
     # Draw hand landmarks on the black frame
     if results_hands.multi_hand_landmarks:
+        print("Hand landmarks detected. Drawing landmarks...")
         for hand_landmarks in results_hands.multi_hand_landmarks:
             mp.solutions.drawing_utils.draw_landmarks(
                 black_frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+    else:
+        print("No hand landmarks detected.")
             
+    print("Returning processed frame.")
     return black_frame
+
 
 # Step 1: Input Continuous Video - Extract frames from the continuous video, apply blackout, and save the video
 def extract_and_blackout_frames(video_path, output_path, frame_rate=1):
@@ -79,28 +91,38 @@ def extract_and_blackout_frames(video_path, output_path, frame_rate=1):
     cap = cv2.VideoCapture(video_path)
 
     # Get frame dimensions
+    print("Get frame dimensions")
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(cap.get(cv2.CAP_PROP_FPS))  # Get the original video's FPS
+    print(f"Frame width: {width}, height: {height}, FPS: {fps}")
 
     # Set up VideoWriter to save the processed frames into a video
+    print("Set up VideoWriter to save the processed frames into a video")
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for mp4
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     count = 0
+    processed_frame_count = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
         if count % frame_rate == 0:
             # Blackout background for the current frame (keep only hands and face)
+            print("Blackout background for the current frame (keep only hands and face)")
             processed_frame = blackout_background_with_hands(frame)
             out.write(processed_frame)  # Write the processed frame to the video
+            processed_frame_count += 1
+            if processed_frame_count % 10 == 0:
+                print(f"Processed {processed_frame_count} frames...")
         count += 1
 
     cap.release()
     out.release()
     print(f"Extracted and processed frames saved to {output_path}.")
+
+
 
 # Step 2: Feature Extraction
 def extract_frames(video_path, frame_rate=1):
