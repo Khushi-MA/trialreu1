@@ -2,3 +2,4 @@ data/video_data105.pt
 data/video_data.pt
 data/video_data2.pt
 *.pt
+.vscode/
